@@ -1,73 +1,41 @@
-import streamlit as st
 import pandas as pd
 import joblib
+import streamlit as st
 
-# ---- LOAD MODEL, SCALER, COLUMNS ----
+# Load model and scaler
 model = joblib.load("final_model.pkl")
 scaler = joblib.load("scaler.pkl")
-columns = joblib.load("columns.pkl")
+columns = joblib.load("columns.pkl")  # saved list of training columns
 
-st.title("Customer Churn Prediction App")
-st.write("Enter customer details to predict churn probability")
+st.title("Customer Churn Prediction")
 
-# ---- USER INPUT ----
-gender = st.selectbox("Gender", ["Male", "Female"])
-senior = st.selectbox("Senior Citizen", [0, 1])
-partner = st.selectbox("Partner", ["Yes", "No"])
-dependents = st.selectbox("Dependents", ["Yes", "No"])
-tenure = st.number_input("Tenure Months", min_value=0, max_value=100, value=12)
-phone_service = st.selectbox("Phone Service", ["Yes", "No"])
-multiple_lines = st.selectbox("Multiple Lines", ["Yes", "No"])
-internet_service = st.selectbox("Internet Service", ["DSL", "Fiber optic", "No"])
-online_security = st.selectbox("Online Security", ["Yes", "No"])
-online_backup = st.selectbox("Online Backup", ["Yes", "No"])
-device_protection = st.selectbox("Device Protection", ["Yes", "No"])
-tech_support = st.selectbox("Tech Support", ["Yes", "No"])
-streaming_tv = st.selectbox("Streaming TV", ["Yes", "No"])
-streaming_movies = st.selectbox("Streaming Movies", ["Yes", "No"])
-contract = st.selectbox("Contract", ["Month-to-month", "One year", "Two year"])
-paperless_billing = st.selectbox("Paperless Billing", ["Yes", "No"])
-payment_method = st.selectbox("Payment Method", ["Electronic check", "Mailed check", "Bank transfer", "Credit card"])
-monthly_charges = st.number_input("Monthly Charges", min_value=0.0, value=70.0)
-total_charges = st.number_input("Total Charges", min_value=0.0, value=1000.0)
+# Input fields
+tenure = st.number_input("Tenure (months)", min_value=0)
+monthly_charges = st.number_input("Monthly Charges")
+contract_type = st.selectbox("Contract Type", ["Month-to-month", "One year", "Two year"])
+# add other inputs as needed...
 
-# ---- CREATE DATAFRAME ----
-data = pd.DataFrame([{
-    "gender": gender,
-    "Senior Citizen": senior,
-    "Partner": partner,
-    "Dependents": dependents,
-    "Tenure Months": tenure,
-    "Phone Service": phone_service,
-    "Multiple Lines": multiple_lines,
-    "Internet Service": internet_service,
-    "Online Security": online_security,
-    "Online Backup": online_backup,
-    "Device Protection": device_protection,
-    "Tech Support": tech_support,
-    "Streaming TV": streaming_tv,
-    "Streaming Movies": streaming_movies,
-    "Contract": contract,
-    "Paperless Billing": paperless_billing,
-    "Payment Method": payment_method,
-    "Monthly Charges": monthly_charges,
-    "Total Charges": total_charges
-}])
+# Create a DataFrame for a single input
+input_dict = {
+    "tenure": tenure,
+    "MonthlyCharges": monthly_charges,
+    "Contract_Month-to-month": 1 if contract_type=="Month-to-month" else 0,
+    "Contract_One year": 1 if contract_type=="One year" else 0,
+    "Contract_Two year": 1 if contract_type=="Two year" else 0,
+    # include other categorical one-hot columns as 0/1
+}
 
-# ---- PREPROCESS DATA ----
-data = pd.get_dummies(data, drop_first=True)
-data = data.reindex(columns=columns, fill_value=0)
-data_scaled = scaler.transform(data)
+input_df = pd.DataFrame([input_dict])
 
-# ---- PREDICT ----
-prediction = model.predict(data_scaled)
-probability = model.predict_proba(data_scaled)
+# Align columns with training data
+input_df = input_df.reindex(columns=columns, fill_value=0)
 
-st.subheader("Prediction")
-if prediction[0] == 0:
-    st.success("Customer is unlikely to churn (0)")
-else:
-    st.error("Customer is likely to churn (1)")
+# Scale numeric features
+input_scaled = scaler.transform(input_df)
 
-st.subheader("Prediction Probability")
-st.bar_chart(pd.DataFrame(probability, columns=["No Churn", "Churn"]))
+# Predict
+prediction = model.predict(input_scaled)
+probability = model.predict_proba(input_scaled)[0][1]
+
+st.write(f"Prediction: {'Likely to churn' if prediction[0]==1 else 'Unlikely to churn'}")
+st.write(f"Churn Probability: {probability:.2f}")
