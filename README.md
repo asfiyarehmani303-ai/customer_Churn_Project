@@ -8,3 +8,6 @@ This project predicts whether a customer is likely to churn or not using a train
 - scaler.pkl → StandardScaler for preprocessing
 - columns.pkl → Columns used in training
 - README.md → This file
+## Live Demo
+
+You can access the live working app here: [Customer Churn App]()
